@@ -1,3 +1,4 @@
+```
 benchmarking spanner-db-googleSql/spannerSelectRowsSequentially: {numQueries: 1}
 time                 4.299 ns   (4.295 ns .. 4.307 ns)
                      1.000 R²   (1.000 R² .. 1.000 R²)
@@ -141,3 +142,4 @@ time                 4.366 ns   (4.365 ns .. 4.368 ns)
                      1.000 R²   (1.000 R² .. 1.000 R²)
 mean                 4.367 ns   (4.364 ns .. 4.375 ns)
 std dev              10.98 ps   (7.403 ps .. 18.38 ps)
+```

@@ -1,0 +1,60 @@
+cabal-version:       2.4
+name:                spanner-db-latency
+version:             0.1.0.0
+author:              Abhishek Singh
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/spanner-db-latency
+
+executable            spanner-db-latency-exe
+  main-is:            Main.hs
+  hs-source-dirs:     src
+  ghc-options:        -Wall
+  default-extensions: StandaloneDeriving
+                    , TypeFamilies
+                    , TypeSynonymInstances
+                    , DeriveGeneric
+                    , FlexibleInstances
+                    , FlexibleContexts
+                    , DeriveAnyClass
+                    , MultiParamTypeClasses
+                    , RecordWildCards
+                    , OverloadedStrings
+                    , AllowAmbiguousTypes
+                    , RankNTypes
+                    , DerivingStrategies
+                    , GeneralizedNewtypeDeriving
+  build-depends:      aeson
+               ,      base
+               ,      http-client
+               ,      http-types
+               ,      markdown-unlit
+               ,      servant
+               ,      servant-client
+               ,      servant-server
+               ,      text
+               ,      transformers
+               ,      uuid
+               ,      wai
+               ,      warp
+               ,      bytestring
+               ,      exceptions
+               ,      mtl
+               ,      gogol
+               ,      gogol-spanner
+               ,      gogol-storage
+               ,      resourcet
+               ,      lens
+               ,      conduit
+               ,      conduit-extra
+               ,      postgresql-simple
+               ,      criterion
+               ,      async
+               ,      time
+               ,      random
+               ,      deepseq
+               ,      resource-pool
+  default-language:   Haskell2010

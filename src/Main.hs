@@ -103,7 +103,7 @@ myConfig :: Config
 myConfig =
   defaultConfig
     { resamples = 5,
-      reportFile = Just "reportFile.md"
+      reportFile = Just "reportFile.html"
     }
 
 main :: IO ()

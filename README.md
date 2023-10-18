@@ -5,6 +5,7 @@
 
 # Results
 - Spanner Instance CPU utilization (mean): 12.07%
+- [Criterion Report File](https://conscious-puppet.github.io/spanner-db-latency-comparison/reportFile.html)
 
 
   |   | postgresSql (pgAdapter) | googleSql

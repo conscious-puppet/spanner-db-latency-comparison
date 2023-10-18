@@ -1,11 +1,3 @@
-# Instance Configuration
-- Region: asia-south1 (Mumbai)
-- Compute capacity:
-    - Processing units: 100
-
-# Results
-- Spanner Instance CPU utilization (mean): 12.07%
-```
 benchmarking postgresSql/pgSelectRowsSequentially: {numQueries: 1}
 time                 44.68 ms   (44.46 ms .. 47.61 ms)
                      0.974 R²   (0.964 R² .. 0.985 R²)
@@ -173,4 +165,3 @@ mean                 7.452 s    (7.328 s .. 7.576 s)
 std dev              272.3 ms   (266.0 ms .. 315.2 ms)
 variance introduced by outliers: 19% (moderately inflated)
 
-```

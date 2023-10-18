@@ -73,7 +73,7 @@ setupEnv = do
     Google.newEnv
       <&> (Google.envLogger .~ lgr)
         . (Google.envScopes .~ Google.spannerDataScope)
-  spannerSessionPool <- createPool (createSession spannerSessionText googleEnv) (deleteSession googleEnv) 10 20 100
+  spannerSessionPool <- createPool (createSession spannerSessionText googleEnv) (deleteSession googleEnv) 10 2000 100
 
   -- Pg connection
   dbHost <- getEnv "dbHost"
@@ -89,7 +89,7 @@ setupEnv = do
             connectHost = dbHost,
             connectDatabase = dbName
           }
-  sqlConnPool <- createPool (connect connectionInfo) close 10 20 100
+  sqlConnPool <- createPool (connect connectionInfo) close 10 2000 100
   -- createPool create free numStripes idleTime maxResources = newPool PoolConfig
   --   { createResource   = create
   --   , freeResource     = free
@@ -102,8 +102,8 @@ setupEnv = do
 myConfig :: Config
 myConfig =
   defaultConfig
-    { resamples = 5,
-      reportFile = Just "reportFile.md"
+    { resamples = 20,
+      reportFile = Just "reportFile.html"
     }
 
 main :: IO ()

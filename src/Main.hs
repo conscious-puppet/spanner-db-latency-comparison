@@ -1,13 +1,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
-module Main
-  ( main,
-  )
+module Main (
+  main,
+)
 where
 
 import Conduit (MonadTrans (lift))
 import Control.Concurrent.Async
+import Control.Exception
 import Control.Lens
 import Control.Monad (forM, void)
 import Control.Monad.Trans.Reader
@@ -29,17 +31,17 @@ import System.IO (stdout)
 import System.Random
 
 data Env = Env
-  { spannerSessionPool :: Pool T.Text,
-    googleEnv :: Google.Env '["https://www.googleapis.com/auth/spanner.data"],
-    spannerSqlConnPool :: Pool Connection,
-    sqlConnPool :: Pool Connection
+  { spannerSessionPool :: Pool T.Text
+  , googleEnv :: Google.Env '["https://www.googleapis.com/auth/spanner.data"]
+  , spannerSqlConnPool :: Pool Connection
+  , sqlConnPool :: Pool Connection
   }
 
 type ReaderIO a = ReaderT Env IO a
 
 getSqlConnPool :: ReaderIO (Pool Connection)
 getSqlConnPool = do
-  Env {..} <- ask
+  Env{..} <- ask
   return sqlConnPool
 
 createSession :: T.Text -> Google.Env '["https://www.googleapis.com/auth/spanner.data"] -> IO T.Text
@@ -57,12 +59,12 @@ deleteSession googleEnv sessionName = do
 
 getGoogleEnv :: ReaderIO (Google.Env '["https://www.googleapis.com/auth/spanner.data"])
 getGoogleEnv = do
-  Env {..} <- ask
+  Env{..} <- ask
   return googleEnv
 
 getSpannerSessionPool :: ReaderIO (Pool T.Text)
 getSpannerSessionPool = do
-  Env {..} <- ask
+  Env{..} <- ask
   return spannerSessionPool
 
 setupEnv :: IO Env
@@ -84,11 +86,11 @@ setupEnv = do
   spannerDbPassword <- getEnv "spannerDbPassword"
   let spannerConnectionInfo =
         ConnectInfo
-          { connectUser = spannerDbUser,
-            connectPort = read spannerDbPort,
-            connectPassword = spannerDbPassword,
-            connectHost = spannerDbHost,
-            connectDatabase = spannerDbName
+          { connectUser = spannerDbUser
+          , connectPort = read spannerDbPort
+          , connectPassword = spannerDbPassword
+          , connectHost = spannerDbHost
+          , connectDatabase = spannerDbName
           }
   spannerSqlConnPool <- createPool (connect spannerConnectionInfo) close 10 2000 100
 
@@ -100,11 +102,11 @@ setupEnv = do
   dbPassword <- getEnv "dbPassword"
   let connectionInfo =
         ConnectInfo
-          { connectUser = dbUser,
-            connectPort = read dbPort,
-            connectPassword = dbPassword,
-            connectHost = dbHost,
-            connectDatabase = dbName
+          { connectUser = dbUser
+          , connectPort = read dbPort
+          , connectPassword = dbPassword
+          , connectHost = dbHost
+          , connectDatabase = dbName
           }
   sqlConnPool <- createPool (connect connectionInfo) close 10 2000 100
   -- createPool create free numStripes idleTime maxResources = newPool PoolConfig
@@ -114,13 +116,13 @@ setupEnv = do
   --   , poolMaxResources = numStripes * maxResources
   --   , poolNumStripes   = Just numStripes
   --   }
-  return $ Env {spannerSessionPool = spannerSessionPool, googleEnv = googleEnv, spannerSqlConnPool = spannerSqlConnPool, sqlConnPool = sqlConnPool}
+  return $ Env{spannerSessionPool = spannerSessionPool, googleEnv = googleEnv, spannerSqlConnPool = spannerSqlConnPool, sqlConnPool = sqlConnPool}
 
 myConfig :: Config
 myConfig =
   defaultConfig
-    { resamples = 20,
-      reportFile = Just "reportFile.html"
+    { resamples = 20
+    , reportFile = Just "reportFile.html"
     }
 
 main :: IO ()
@@ -130,48 +132,48 @@ main = do
     myConfig
     [ bgroup
         "spanner postgresSql interface"
-        [ bench "spannerPgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 1)) envVariables,
-          bench "spannerPgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 100)) envVariables,
-          bench "spannerPgSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 1 500)) envVariables,
-          bench "spannerPgSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 20 500)) envVariables,
-          bench "spannerPgSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows 1 5)) envVariables,
-          bench "spannerPgSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows 20 5)) envVariables,
-          bench "spannerPgSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 10)) envVariables,
-          bench "spannerPgSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 100)) envVariables,
-          bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 1 500)) envVariables,
-          bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 100 500)) envVariables,
-          bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel 1 5)) envVariables,
-          bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel 100 5)) envVariables
-        ],
-      bgroup
+        [ bench "spannerPgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 1)) envVariables
+        , bench "spannerPgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 100)) envVariables
+        , bench "spannerPgSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 1 500)) envVariables
+        , bench "spannerPgSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 20 500)) envVariables
+        , bench "spannerPgSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows 1 5)) envVariables
+        , bench "spannerPgSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows 20 5)) envVariables
+        , bench "spannerPgSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 10)) envVariables
+        , bench "spannerPgSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 100)) envVariables
+        , bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 1 500)) envVariables
+        , bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 100 500)) envVariables
+        , bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel 1 5)) envVariables
+        , bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel 100 5)) envVariables
+        ]
+    , bgroup
         "postgresSql"
-        [ bench "pgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (pgSelectRowsSequentially 1)) envVariables,
-          bench "pgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (pgSelectRowsSequentially 100)) envVariables,
-          bench "pgSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRows 1 500)) envVariables,
-          bench "pgSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRows 20 500)) envVariables,
-          bench "pgSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRows 1 5)) envVariables,
-          bench "pgSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRows 20 5)) envVariables,
-          bench "pgSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (pgSelectRowsInParallel 10)) envVariables,
-          bench "pgSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (pgSelectRowsInParallel 100)) envVariables,
-          bench "pgSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRowsInParallel 1 500)) envVariables,
-          bench "pgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRowsInParallel 100 500)) envVariables,
-          bench "pgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRowsInParallel 1 5)) envVariables,
-          bench "pgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRowsInParallel 100 5)) envVariables
-        ],
-      bgroup
+        [ bench "pgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (pgSelectRowsSequentially 1)) envVariables
+        , bench "pgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (pgSelectRowsSequentially 100)) envVariables
+        , bench "pgSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRows 1 500)) envVariables
+        , bench "pgSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRows 20 500)) envVariables
+        , bench "pgSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRows 1 5)) envVariables
+        , bench "pgSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRows 20 5)) envVariables
+        , bench "pgSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (pgSelectRowsInParallel 10)) envVariables
+        , bench "pgSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (pgSelectRowsInParallel 100)) envVariables
+        , bench "pgSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRowsInParallel 1 500)) envVariables
+        , bench "pgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRowsInParallel 100 500)) envVariables
+        , bench "pgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRowsInParallel 1 5)) envVariables
+        , bench "pgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRowsInParallel 100 5)) envVariables
+        ]
+    , bgroup
         "googleSql"
-        [ bench "spannerSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (spannerSelectRowsSequentially 1)) envVariables,
-          bench "spannerSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (spannerSelectRowsSequentially 100)) envVariables,
-          bench "spannerSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRows 1 500)) envVariables,
-          bench "spannerSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRows 20 500)) envVariables,
-          bench "spannerSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRows 1 5)) envVariables,
-          bench "spannerSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRows 20 5)) envVariables,
-          bench "spannerSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (spannerSelectRowsInParallel 10)) envVariables,
-          bench "spannerSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (spannerSelectRowsInParallel 100)) envVariables,
-          bench "spannerSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRowsInParallel 1 500)) envVariables,
-          bench "spannerSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRowsInParallel 100 500)) envVariables,
-          bench "spannerSelectAndUpdateRowsInParallel: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRowsInParallel 1 5)) envVariables,
-          bench "spannerSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRowsInParallel 100 5)) envVariables
+        [ bench "spannerSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (spannerSelectRowsSequentially 1)) envVariables
+        , bench "spannerSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (spannerSelectRowsSequentially 100)) envVariables
+        , bench "spannerSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRows 1 500)) envVariables
+        , bench "spannerSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRows 20 500)) envVariables
+        , bench "spannerSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRows 1 5)) envVariables
+        , bench "spannerSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRows 20 5)) envVariables
+        , bench "spannerSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (spannerSelectRowsInParallel 10)) envVariables
+        , bench "spannerSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (spannerSelectRowsInParallel 100)) envVariables
+        , bench "spannerSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRowsInParallel 1 500)) envVariables
+        , bench "spannerSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (spannerSelectMultipleRowsInParallel 100 500)) envVariables
+        , bench "spannerSelectAndUpdateRowsInParallel: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRowsInParallel 1 5)) envVariables
+        , bench "spannerSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerSelectAndUpdateRowsInParallel 100 5)) envVariables
         ]
     ]
 
@@ -241,7 +243,6 @@ pgSelectAndUpdateRowsInParallel numTransactions numRowsPerTx =
         [1 .. numTransactions]
         (const $ runReaderT (runPgSelectAndUpdate numRowsPerTx) env')
 
-
 spannerPgSelectRowsSequentially :: Int -> ReaderIO ()
 spannerPgSelectRowsSequentially numQueries = for_ [1 .. numQueries] (const runSpannerPgSelectOne)
 
@@ -283,14 +284,14 @@ runPgSelectOne = do
   sqlConnPool <- getSqlConnPool
   randomNumber <- lift $ drawInt 1000
   let selectQuery = "select * from books where id = " <> show randomNumber
-  lift $ withResource sqlConnPool $ \conn -> query_ conn (fromString selectQuery)
+  lift $ withResource sqlConnPool $ \conn -> tryCatch (query_ conn) (fromString selectQuery)
 
 runPgSelectMany :: Int -> ReaderIO [(Int, Int, String, String)]
 runPgSelectMany numRows = do
   sqlConnPool <- getSqlConnPool
   randomNumber <- lift $ drawInt 1000
   let selectQuery = "select * from books where id > " <> show randomNumber <> " limit " <> show numRows
-  lift $ withResource sqlConnPool $ \conn -> query_ conn (fromString selectQuery)
+  lift $ withResource sqlConnPool $ \conn -> tryCatch (query_ conn) (fromString selectQuery)
 
 runPgSelectAndUpdate :: Int -> ReaderIO [[(Int, Int, String, String)]]
 runPgSelectAndUpdate numRowsPerTx = do
@@ -299,31 +300,32 @@ runPgSelectAndUpdate numRowsPerTx = do
   lift $ withResource sqlConnPool $ \conn ->
     withTransactionMode (TransactionMode Serializable ReadWrite) conn $
       forM [1 .. numRowsPerTx] (const $ selectAndUpdate conn env')
-  where
-    selectAndUpdate conn env' = do
-      randomIdNumber <- drawInt 1000
-      sqlConnPool <- runReaderT getSqlConnPool env'
-      let selectQuery = "select * from books where id = " <> show randomIdNumber
-      void $ withResource sqlConnPool $ \conn' -> query_ conn' (fromString selectQuery) :: IO [(Int, Int, String, String)]
+ where
+  selectAndUpdate conn env' = do
+    randomIdNumber <- drawInt 1000
+    sqlConnPool <- runReaderT getSqlConnPool env'
+    let selectQuery = "select * from books where id = " <> show randomIdNumber
+    void $ withResource sqlConnPool $ \conn' -> tryCatch (query_ conn') (fromString selectQuery) :: IO [(Int, Int, String, String)]
 
-      randomNumber <- drawInt 1000
-      let updateQuery = "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber <> " returning *"
+    randomNumber <- drawInt 1000
+    let updateQuery = "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber <> " returning *"
 
-      query_ conn (fromString updateQuery)
+    tryCatch (query_ conn) (fromString updateQuery)
 
 runSpannerPgSelectOne :: ReaderIO [(Int, Int, String, String)]
 runSpannerPgSelectOne = do
   sqlConnPool <- getSqlConnPool
   randomNumber <- lift $ drawInt 1000
   let selectQuery = "select * from books where id = " <> show randomNumber
-  lift $ withResource sqlConnPool $ \conn -> query_ conn (fromString selectQuery)
+  lift $ withResource sqlConnPool $ \conn -> do
+    tryCatch (query_ conn) (fromString selectQuery)
 
 runSpannerPgSelectMany :: Int -> ReaderIO [(Int, Int, String, String)]
 runSpannerPgSelectMany numRows = do
   sqlConnPool <- getSqlConnPool
   randomNumber <- lift $ drawInt 1000
   let selectQuery = "select * from books where id > " <> show randomNumber <> " limit " <> show numRows
-  lift $ withResource sqlConnPool $ \conn -> query_ conn (fromString selectQuery)
+  lift $ withResource sqlConnPool $ \conn -> tryCatch (query_ conn) (fromString selectQuery)
 
 runSpannerPgSelectAndUpdate :: Int -> ReaderIO [[(Int, Int, String, String)]]
 runSpannerPgSelectAndUpdate numRowsPerTx = do
@@ -332,17 +334,17 @@ runSpannerPgSelectAndUpdate numRowsPerTx = do
   lift $ withResource sqlConnPool $ \conn ->
     withTransactionMode (TransactionMode Serializable ReadWrite) conn $
       forM [1 .. numRowsPerTx] (const $ selectAndUpdate conn env')
-  where
-    selectAndUpdate conn env' = do
-      randomIdNumber <- drawInt 1000
-      sqlConnPool <- runReaderT getSqlConnPool env'
-      let selectQuery = "select * from books where id = " <> show randomIdNumber
-      void $ withResource sqlConnPool $ \conn' -> query_ conn' (fromString selectQuery) :: IO [(Int, Int, String, String)]
+ where
+  selectAndUpdate conn env' = do
+    randomIdNumber <- drawInt 1000
+    sqlConnPool <- runReaderT getSqlConnPool env'
+    let selectQuery = "select * from books where id = " <> show randomIdNumber
+    void $ withResource sqlConnPool $ \conn' -> tryCatch (query_ conn') (fromString selectQuery) :: IO [(Int, Int, String, String)]
 
-      randomNumber <- drawInt 1000
-      let updateQuery = "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber <> " returning *"
+    randomNumber <- drawInt 1000
+    let updateQuery = "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber <> " returning *"
 
-      query_ conn (fromString updateQuery)
+    tryCatch (query_ conn) (fromString updateQuery)
 
 runSpannerSelectOne :: ReaderIO [[Value]]
 runSpannerSelectOne = do
@@ -390,26 +392,31 @@ runSpannerSelectAndUpdate numRowsPerTx = do
     let _ = fromJust (commitResponse' ^. Google.crCommitTimestamp)
     -- lift $ putResource localPool sessionName
     return $ map (^. Google.rsRows) resultSet'
-  where
-    selectAndUpdate transactionId googleEnv sessionName seqNo = do
-      let txnSelector = Google.transactionSelector & Google.tsId ?~ transactionId
+ where
+  selectAndUpdate transactionId googleEnv sessionName seqNo = do
+    let txnSelector = Google.transactionSelector & Google.tsId ?~ transactionId
 
-      randomIdNumber <- drawInt 1000
-      let selectQuery' = T.pack $ "select * from books where id = " <> show randomIdNumber
-      let selectQuery =
-            Google.executeSQLRequest
-              & Google.esqlrSQL ?~ selectQuery'
-      let executeSelectQuery = Google.projectsInstancesDatabasesSessionsExecuteSQL selectQuery sessionName
-      void $ runResourceT . Google.runGoogle googleEnv $ Google.send executeSelectQuery
+    randomIdNumber <- drawInt 1000
+    let selectQuery' = T.pack $ "select * from books where id = " <> show randomIdNumber
+    let selectQuery =
+          Google.executeSQLRequest
+            & Google.esqlrSQL ?~ selectQuery'
+    let executeSelectQuery = Google.projectsInstancesDatabasesSessionsExecuteSQL selectQuery sessionName
+    void $ runResourceT . Google.runGoogle googleEnv $ Google.send executeSelectQuery
 
-      randomNumber <- drawInt 1000
-      -- let updateQuery' = T.pack $ "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber <> " then return id, number, name, author"
-      let updateQuery' = T.pack $ "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber
+    randomNumber <- drawInt 1000
+    -- let updateQuery' = T.pack $ "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber <> " then return id, number, name, author"
+    let updateQuery' = T.pack $ "update books set number = " <> show randomNumber <> " where id = " <> show randomIdNumber
 
-      let updateQuery =
-            Google.executeSQLRequest
-              & Google.esqlrSQL ?~ updateQuery'
-              & Google.esqlrTransaction ?~ txnSelector
-              & Google.esqlrSeqno ?~ fromIntegral seqNo
-      let executeUpdateQuery = Google.projectsInstancesDatabasesSessionsExecuteSQL updateQuery sessionName
-      runResourceT . Google.runGoogle googleEnv $ Google.send executeUpdateQuery
+    let updateQuery =
+          Google.executeSQLRequest
+            & Google.esqlrSQL ?~ updateQuery'
+            & Google.esqlrTransaction ?~ txnSelector
+            & Google.esqlrSeqno ?~ fromIntegral seqNo
+    let executeUpdateQuery = Google.projectsInstancesDatabasesSessionsExecuteSQL updateQuery sessionName
+    runResourceT . Google.runGoogle googleEnv $ Google.send executeUpdateQuery
+
+tryCatch :: forall a b. (a -> IO b) -> a -> IO b
+tryCatch f input = do
+  errored :: Either SomeException b <- try $ f input
+  either (const $ tryCatch f input) return errored

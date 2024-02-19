@@ -9,12 +9,12 @@
       imports = [
         inputs.haskell-flake.flakeModule
       ];
-      perSystem = { self', system, pkgs, lib, ... }:
+      perSystem = { self', config, system, pkgs, lib, ... }:
         {
           _module.args.pkgs = import inputs.nixpkgs { inherit system; config.allowBroken = true; };
           haskellProjects.default = {
-            devShell.tools = hp: { jdk17 = pkgs.jdk17; };
             basePackages = pkgs.haskell.packages.ghc8107;
+            autoWire = [ "packages" "apps" ];
             packages = {
               aeson.source = "1.5.6.0";
               base-compat-batteries.source = "0.11.2";
@@ -34,52 +34,17 @@
               tree-diff.jailbreak = true;
             };
           };
-          packages.default = self'.packages.spanner-db-latency;
-          packages.spanner-db-latency-docker = pkgs.symlinkJoin {
-            name = "spanner-db-latency";
-            paths = pkgs.haskell.lib.justStaticExecutables self'.packages.spanner-db-latency;
-            postBuild = ''
-              mkdir -p $out/opt/app/
-              for f in `${lib.getExe pkgs.fd} . $out/bin/`; do
-                ln -s $f $out/opt/app/
-              done
-            '';
+          devShells.default = pkgs.mkShell {
+            name = "spanner";
+            inputsFrom = [
+              config.haskellProjects.default.outputs.devShell
+            ];
+            buildInputs = with pkgs; [
+              jdk17
+              google-cloud-sdk
+            ];
           };
-          packages.dockerImage =
-            pkgs.dockerTools.buildImage {
-              name = "spanner-db-latency";
-              created = "now";
-              tag = builtins.substring 0 9 (self.rev or "dev");
-              copyToRoot = pkgs.buildEnv {
-                paths = with pkgs; [
-                  bash
-                  gnused
-                  gzip
-                  curl
-                  inetutils
-                  dnsutils
-                  netcat
-                  libxml2
-                  postgresql_12
-                  coreutils
-
-                  self'.packages.spanner-db-latency-docker
-                ];
-                name = "spanner-db-latency-root";
-                pathsToLink = [
-                  "/bin"
-                  "/opt"
-                ];
-              };
-              config = {
-                Env = [
-                  "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-                  # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
-                  "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-                ];
-                Cmd = [ "${self'.packages.spanner-db-latency-docker}/bin/spanner-db-latency-exe" ];
-              };
-            };
+          packages.default = self'.packages.spanner-db-latency-test;
         };
     };
 }

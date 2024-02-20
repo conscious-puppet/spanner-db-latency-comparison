@@ -82,7 +82,7 @@ setupEnv = do
     Google.newEnv
       <&> (Google.envLogger .~ lgr)
         . (Google.envScopes .~ Google.spannerDataScope)
-  spannerSessionPool <- createPool (createSession spannerSessionText googleEnv) (deleteSession googleEnv) 10 2000 50
+  spannerSessionPool <- createPool (createSession spannerSessionText googleEnv) (deleteSession googleEnv) 10 1 100
 
   -- spanner pgsql interface connection
   spannerDbHost <- getEnv "spannerDbHost"
@@ -98,7 +98,7 @@ setupEnv = do
           , connectHost = spannerDbHost
           , connectDatabase = spannerDbName
           }
-  spannerSqlConnPool <- createPool (connect spannerConnectionInfo) close 10 2000 50
+  spannerSqlConnPool <- createPool (connect spannerConnectionInfo) close 10 1 100
 
   -- pgsql connection
   dbHost <- getEnv "dbHost"
@@ -114,7 +114,7 @@ setupEnv = do
           , connectHost = dbHost
           , connectDatabase = dbName
           }
-  sqlConnPool <- createPool (connect connectionInfo) close 10 2000 50
+  sqlConnPool <- createPool (connect connectionInfo) close 10 1 100
   -- createPool create free numStripes idleTime maxResources = newPool PoolConfig
   --   { createResource   = create
   --   , freeResource     = free

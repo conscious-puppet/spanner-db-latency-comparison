@@ -82,7 +82,7 @@ setupEnv = do
     Google.newEnv
       <&> (Google.envLogger .~ lgr)
         . (Google.envScopes .~ Google.spannerDataScope)
-  spannerSessionPool <- createPool (createSession spannerSessionText googleEnv) (deleteSession googleEnv) 10 2000 10
+  spannerSessionPool <- createPool (createSession spannerSessionText googleEnv) (deleteSession googleEnv) 10 2000 50
 
   -- spanner pgsql interface connection
   spannerDbHost <- getEnv "spannerDbHost"
@@ -98,7 +98,7 @@ setupEnv = do
           , connectHost = spannerDbHost
           , connectDatabase = spannerDbName
           }
-  spannerSqlConnPool <- createPool (connect spannerConnectionInfo) close 10 2000 10
+  spannerSqlConnPool <- createPool (connect spannerConnectionInfo) close 10 2000 50
 
   -- pgsql connection
   dbHost <- getEnv "dbHost"
@@ -114,7 +114,7 @@ setupEnv = do
           , connectHost = dbHost
           , connectDatabase = dbName
           }
-  sqlConnPool <- createPool (connect connectionInfo) close 10 2000 10
+  sqlConnPool <- createPool (connect connectionInfo) close 10 2000 50
   -- createPool create free numStripes idleTime maxResources = newPool PoolConfig
   --   { createResource   = create
   --   , freeResource     = free
@@ -137,21 +137,6 @@ main = do
   defaultMainWith
     myConfig
     [ bgroup
-        "pgAdapter"
-        [ bench "spannerPgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 1)) envVariables
-        , bench "spannerPgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 100)) envVariables
-        , bench "spannerPgSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 1 500)) envVariables
-        , bench "spannerPgSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 20 500)) envVariables
-        , bench "spannerPgSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows (drawIds 1 5))) envVariables
-        , bench "spannerPgSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows (drawIds 20 5))) envVariables
-        , bench "spannerPgSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 10)) envVariables
-        , bench "spannerPgSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 100)) envVariables
-        , bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 1 500)) envVariables
-        , bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 100 500)) envVariables
-        , bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel (drawIds 1 5))) envVariables
-        , bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel (drawIds 100 5))) envVariables
-        ]
-    , bgroup
         "postgresSql"
         [ bench "pgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (pgSelectRowsSequentially 1)) envVariables
         , bench "pgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (pgSelectRowsSequentially 100)) envVariables
@@ -165,6 +150,21 @@ main = do
         , bench "pgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (pgSelectMultipleRowsInParallel 100 500)) envVariables
         , bench "pgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRowsInParallel (drawIds 1 5))) envVariables
         , bench "pgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (pgSelectAndUpdateRowsInParallel (drawIds 100 5))) envVariables
+        ]
+    , bgroup
+        "pgAdapter"
+        [ bench "spannerPgSelectRowsSequentially: {numQueries: 1}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 1)) envVariables
+        , bench "spannerPgSelectRowsSequentially: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsSequentially 100)) envVariables
+        , bench "spannerPgSelectMultipleRows: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 1 500)) envVariables
+        , bench "spannerPgSelectMultipleRows: {numQueries: 20, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRows 20 500)) envVariables
+        , bench "spannerPgSelectAndUpdateRows: {numTransactions: 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows (drawIds 1 5))) envVariables
+        , bench "spannerPgSelectAndUpdateRows: {numTransactions: 20, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRows (drawIds 20 5))) envVariables
+        , bench "spannerPgSelectRowsInParallel: {numQueries: 10}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 10)) envVariables
+        , bench "spannerPgSelectRowsInParallel: {numQueries: 100}" $ nfAppIO (runReaderT (spannerPgSelectRowsInParallel 100)) envVariables
+        , bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 1, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 1 500)) envVariables
+        , bench "spannerPgSelectMultipleRowsInParallel: {numQueries: 100, numRows: 500}" $ nfAppIO (runReaderT (spannerPgSelectMultipleRowsInParallel 100 500)) envVariables
+        , bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions : 1, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel (drawIds 1 5))) envVariables
+        , bench "spannerPgSelectAndUpdateRowsInParallel: {numTransactions: 100, numRowsPerTx: 5}" $ nfAppIO (runReaderT (spannerPgSelectAndUpdateRowsInParallel (drawIds 100 5))) envVariables
         ]
     , bgroup
         "googleSql"

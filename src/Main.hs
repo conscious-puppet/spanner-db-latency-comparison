@@ -286,7 +286,7 @@ drawInt :: Int -> IO Int
 drawInt a = randomRIO (1, a)
 
 drawIds :: Int -> Int -> [[Int]]
-drawIds range chunks = chunksOf chunks [1 .. range]
+drawIds length chunks = chunksOf chunks [1 .. (length * chunks)]
 
 runPgSelectOne :: Int -> ReaderIO [(Int, Int, String, String)]
 runPgSelectOne id = do
@@ -305,7 +305,8 @@ runPgSelectAndUpdate rowsPerTx = do
   sqlConnPool <- getSqlConnPool
   env' <- ask
   lift $ withResource sqlConnPool $ \conn ->
-    withTransactionMode (TransactionMode Serializable ReadWrite) conn $
+    -- withTransactionMode (TransactionMode Serializable ReadWrite) conn $
+    withTransactionMode (TransactionMode DefaultIsolationLevel ReadWrite) conn $
       forM rowsPerTx (selectAndUpdate conn env')
  where
   selectAndUpdate conn env' id = do
@@ -336,7 +337,8 @@ runSpannerPgSelectAndUpdate rowsPerTx = do
   sqlConnPool <- getSpannerSqlConnPool
   env' <- ask
   lift $ withResource sqlConnPool $ \conn ->
-    withTransactionMode (TransactionMode Serializable ReadWrite) conn $
+    -- withTransactionMode (TransactionMode Serializable ReadWrite) conn $
+    withTransactionMode (TransactionMode DefaultIsolationLevel ReadWrite) conn $
       forM rowsPerTx (selectAndUpdate conn env')
  where
   selectAndUpdate conn env' id = do

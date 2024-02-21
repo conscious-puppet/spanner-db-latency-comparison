@@ -1,5 +1,5 @@
 # Results
-- [Criterion Report File](https://conscious-puppet.github.io/spanner-db-latency-comparison/reportFile.html)
+- [Criterion Report File](https://github.com/conscious-puppet/spanner-db-latency-comparison/blob/postgres-comparison/reportFile.html)
 
 |                               |                                         | postgresSql | pgAdapter | googleSql |
 |-------------------------------|-----------------------------------------|-------------|-----------|-----------|
